@@ -1,9 +1,10 @@
+import os
+import pytz
 from flask import Flask, render_template, request, redirect, url_for, session
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 import csv
 from dotenv import load_dotenv
-import os
 
 # Set the working directory to the directory where this script is located
 app_dir = os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +15,9 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
+
+# Configure timezone from .env
+TIMEZONE = pytz.timezone(os.getenv('TIMEZONE', 'Australia/Melbourne'))
 
 # Sample allergens list
 allergens = ["Eggs", "Dairy", "Wheat", "Rice", "Soy", "Peanuts", "Tree-Nuts", "Seeds", "Shellfish", "Fish"]
@@ -29,10 +33,9 @@ def ensure_csv_header():
         file.seek(0)  # Go to the start of the file
         first_line = file.readline().strip()
         
-        # If the file doesn't exist or the first line is not the header, write it
         if not file_exists or first_line != 'username,allergen,timestamp':
-            file.seek(0)  # Go back to the start of the file
-            file.truncate()  # Clear the file content
+            file.seek(0)
+            file.truncate()
             writer = csv.writer(file)
             writer.writerow(['username', 'allergen', 'timestamp'])
 
@@ -59,8 +62,8 @@ def save_user_data(username, allergen, timestamp):
         writer.writerow([username, allergen, timestamp.isoformat()])
 
 def clear_selections_if_new_day():
-    """Clear allergen selections if the day has changed."""
-    today = date.today().isoformat()
+    """Clear allergen selections if the day has changed, considering the configured timezone."""
+    today = datetime.now(TIMEZONE).date().isoformat()
     last_recorded_date = session.get('last_recorded_date')
 
     if last_recorded_date != today:
@@ -100,7 +103,7 @@ def tracker():
         if allergen not in user_data:
             user_data[allergen] = []
         
-        timestamp = datetime.now()
+        timestamp = datetime.now(pytz.utc).astimezone(TIMEZONE)
         user_data[allergen].append(timestamp)
         save_user_data(username, allergen, timestamp)
         session['user_data'] = user_data  # Update the session with the new data
@@ -121,7 +124,7 @@ def grid():
     user_data = load_user_data(username)
 
     # Calculate the start of the two-week period (starting from Monday two weeks ago)
-    today = date.today()
+    today = datetime.now(TIMEZONE).date()
     start_of_two_weeks = today - timedelta(days=today.weekday() + 7)
 
     # Get all dates for the past two weeks (14 days)
