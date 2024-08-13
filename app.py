@@ -2,24 +2,25 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 import csv
-import os
 from dotenv import load_dotenv
+import os
+
+# Set the working directory to the directory where this script is located
+app_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(app_dir)
 
 # Load environment variables from the .env file
 load_dotenv()
 
 app = Flask(__name__)
-
-# Set the secret key from the environment variable
 app.secret_key = os.getenv('SECRET_KEY')
 
 # Sample allergens list
 allergens = ["Eggs", "Dairy", "Wheat", "Rice", "Soy", "Peanuts", "Tree-Nuts", "Seeds", "Shellfish", "Fish"]
 
 # Path to the CSV file
-CSV_FILE = 'user_data.csv'
+CSV_FILE = os.path.join(app_dir, 'user_data.csv')
 
-# Ensure the CSV file has the correct headers
 def ensure_csv_header():
     """Ensure the CSV file has the correct headers."""
     file_exists = os.path.exists(CSV_FILE)
@@ -43,11 +44,6 @@ def load_user_data(username):
     if os.path.exists(CSV_FILE):
         with open(CSV_FILE, mode='r') as file:
             reader = csv.DictReader(file)
-            
-            # Ensure the CSV has the correct headers
-            if reader.fieldnames != ['username', 'allergen', 'timestamp']:
-                raise ValueError("CSV file does not have the correct headers.")
-            
             for row in reader:
                 if row['username'].strip().lower() == username.lower():
                     timestamp = datetime.fromisoformat(row['timestamp'])
@@ -55,15 +51,21 @@ def load_user_data(username):
     
     return user_data
 
-
 def save_user_data(username, allergen, timestamp):
     """Save the user's data to the CSV file."""
     ensure_csv_header()
-
     with open(CSV_FILE, mode='a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([username, allergen, timestamp.isoformat()])
 
+def clear_selections_if_new_day():
+    """Clear allergen selections if the day has changed."""
+    today = date.today().isoformat()
+    last_recorded_date = session.get('last_recorded_date')
+
+    if last_recorded_date != today:
+        session['selected_allergens'] = []
+        session['last_recorded_date'] = today
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -74,7 +76,6 @@ def index():
         return redirect(url_for('grid'))
 
     return render_template('index.html')
-
 
 @app.route('/tracker', methods=['GET', 'POST'])
 def tracker():
@@ -87,8 +88,8 @@ def tracker():
     if 'user_data' not in session:
         session['user_data'] = {allergen: [] for allergen in allergens}
 
-    if 'selected_allergens' not in session:
-        session['selected_allergens'] = []
+    # Clear selections if the day has changed
+    clear_selections_if_new_day()
 
     user_data = session['user_data']
 
@@ -109,7 +110,6 @@ def tracker():
             session['selected_allergens'].append(allergen)
 
     return render_template('tracker.html', allergens=allergens)
-
 
 @app.route('/grid')
 def grid():
@@ -137,7 +137,6 @@ def grid():
                 grid_data[allergen][timestamp_date] = True
 
     return render_template('grid.html', allergens=allergens, grid_data=grid_data, week_dates=week_dates)
-
 
 @app.route('/logout')
 def logout():
