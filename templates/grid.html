@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Allergen Grid</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        td.recorded {
+            background-color: #D8BFD8; /* Lilac color */
+        }
+        .allergen-row {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .allergen-row > div {
+            flex: 1 0 100%;
+        }
+        @media (min-width: 768px) {
+            .allergen-row > div {
+                flex: 1;
+            }
+        }
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            background-color: #f8f9fa;
+            padding: 0.5rem;
+            border-bottom: 1px solid #ddd;
+        }
+        .sticky-nav a {
+            margin: 0.2rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="mb-4">Allergen Grid for the Past Two Weeks</h1>
+            <div>
+                <span class="me-3">User: {{ session.get('username').capitalize() }}</span>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-sm">Change User</a>
+            </div>
+        </div>
+        
+        <div class="table-responsive d-none d-md-block">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        {% for allergen in allergens %}
+                        <th>{{ allergen }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in week_dates %}
+                    <tr>
+                        <td>{{ day.strftime('%A, %d %B %Y') }}</td>
+                        {% for allergen in allergens %}
+                        <td class="{{ 'recorded' if grid_data[allergen][day] else '' }}"></td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="d-block d-md-none">
+            <div class="sticky-nav text-center">
+                <strong>Jump to:</strong>
+                {% for allergen in allergens %}
+                <a href="#{{ allergen }}" class="btn btn-outline-primary btn-sm">{{ allergen }}</a>
+                {% endfor %}
+            </div>
+            <div class="table-responsive">
+                <div class="allergen-row">
+                    {% for allergen in allergens %}
+                    <div id="{{ allergen }}">
+                        <h5 class="text-center">{{ allergen }}</h5>
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>{{ allergen }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for day in week_dates %}
+                                <tr>
+                                    <td>{{ day.strftime('%A, %d %B %Y') }}</td>
+                                    <td class="{{ 'recorded' if grid_data[allergen][day] else '' }}"></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{{ url_for('tracker') }}" class="btn btn-primary">Back to Allergen Tracker</a>
+        </div>
+    </div>
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
