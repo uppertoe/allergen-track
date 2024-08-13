@@ -19,9 +19,25 @@ allergens = ["Eggs", "Dairy", "Wheat", "Rice", "Soy", "Peanuts", "Tree-Nuts", "S
 # Path to the CSV file
 CSV_FILE = 'user_data.csv'
 
+# Ensure the CSV file has the correct headers
+def ensure_csv_header():
+    """Ensure the CSV file has the correct headers."""
+    file_exists = os.path.exists(CSV_FILE)
+    
+    with open(CSV_FILE, mode='a+', newline='') as file:
+        file.seek(0)  # Go to the start of the file
+        first_line = file.readline().strip()
+        
+        # If the file doesn't exist or the first line is not the header, write it
+        if not file_exists or first_line != 'username,allergen,timestamp':
+            file.seek(0)  # Go back to the start of the file
+            file.truncate()  # Clear the file content
+            writer = csv.writer(file)
+            writer.writerow(['username', 'allergen', 'timestamp'])
 
 def load_user_data(username):
     """Load the user's data from the CSV file."""
+    ensure_csv_header()
     user_data = defaultdict(list)
     
     if os.path.exists(CSV_FILE):
@@ -42,6 +58,8 @@ def load_user_data(username):
 
 def save_user_data(username, allergen, timestamp):
     """Save the user's data to the CSV file."""
+    ensure_csv_header()
+
     with open(CSV_FILE, mode='a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([username, allergen, timestamp.isoformat()])
@@ -69,6 +87,9 @@ def tracker():
     if 'user_data' not in session:
         session['user_data'] = {allergen: [] for allergen in allergens}
 
+    if 'selected_allergens' not in session:
+        session['selected_allergens'] = []
+
     user_data = session['user_data']
 
     if request.method == 'POST':
@@ -82,6 +103,10 @@ def tracker():
         user_data[allergen].append(timestamp)
         save_user_data(username, allergen, timestamp)
         session['user_data'] = user_data  # Update the session with the new data
+        
+        # Store the selected allergen in session to keep the button active
+        if allergen not in session['selected_allergens']:
+            session['selected_allergens'].append(allergen)
 
     return render_template('tracker.html', allergens=allergens)
 
@@ -120,12 +145,5 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-
 if __name__ == '__main__':
-    # Ensure the CSV file has the correct headers
-    if not os.path.exists(CSV_FILE):
-        with open(CSV_FILE, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(['username', 'allergen', 'timestamp'])
-
     app.run(debug=True)

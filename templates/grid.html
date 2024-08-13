@@ -33,6 +33,20 @@
         .sticky-nav a {
             margin: 0.2rem;
         }
+        /* Fixed bottom button for mobile view */
+        @media (max-width: 767px) {
+            .fixed-bottom-button {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                z-index: 1030;
+                background-color: white;
+                border-top: 1px solid #ddd;
+                padding: 0.5rem;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -101,9 +115,10 @@
                 </div>
             </div>
         </div>
-        
-        <div class="text-center mt-4">
-            <a href="{{ url_for('tracker') }}" class="btn btn-primary">Back to Allergen Tracker</a>
+
+        <!-- Visible on all screens, fixed at bottom only on mobile -->
+        <div class="text-center mt-4 fixed-bottom-button d-block">
+            <a href="{{ url_for('tracker') }}" class="btn btn-primary w-100">Record Allergens</a>
         </div>
     </div>
     <!-- Bootstrap JS and dependencies -->
