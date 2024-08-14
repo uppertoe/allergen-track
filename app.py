@@ -137,11 +137,17 @@ def get_selected_allergens(username, current_date):
     with open(CSV_FILE, mode='r') as file:
         reader = csv.DictReader(file)
         for row in reader:
-            row_timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE).date()
-            if row['username'].strip().lower() == username.lower() and row_timestamp == current_date:
+            row_timestamp = datetime.fromisoformat(row['timestamp']).astimezone(pytz.utc).astimezone(pytz.timezone(os.getenv("TIMEZONE", "Australia/Melbourne")))
+            if row['username'].strip().lower() == username.lower() and row_timestamp.date() == current_date:
                 selected_allergens.append(row['allergen'])
 
     return selected_allergens
+
+
+def get_current_date():
+    """Return the current date based on the configured timezone."""
+    timezone = pytz.timezone(os.getenv("TIMEZONE", "Australia/Melbourne"))
+    return datetime.now(timezone).date()
 
 @app.route('/tracker', methods=['GET', 'POST'])
 def tracker():
@@ -150,23 +156,26 @@ def tracker():
     if not username:
         return redirect(url_for('index'))
     
-    current_date = datetime.now(TIMEZONE).date()
+    current_date = get_current_date()
+
+    # Load allergens selected for the current day
     selected_allergens = get_selected_allergens(username, current_date)
 
     if request.method == 'POST':
         allergen = request.form.get('allergen')
+        timestamp = datetime.now(pytz.utc).astimezone(pytz.timezone(os.getenv("TIMEZONE", "Australia/Melbourne")))
 
         if allergen in selected_allergens:
-            # Remove the allergen data for the current day
+            # If allergen is already selected, remove it
             remove_user_data(username, allergen, current_date)
             selected_allergens.remove(allergen)
         else:
             # Add the allergen data for the current day
-            timestamp = datetime.now(pytz.utc).astimezone(TIMEZONE)
             save_user_data(username, allergen, timestamp)
             selected_allergens.append(allergen)
 
-    return render_template('tracker.html', allergens=allergens, selected_allergens=selected_allergens, username=username)
+    return render_template('tracker.html', allergens=allergens, selected_allergens=selected_allergens)
+
 
 @app.route('/grid')
 def grid():
