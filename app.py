@@ -73,6 +73,16 @@ def clear_selections_if_new_day():
         session['selected_allergens'] = []
         session['last_recorded_date'] = today
 
+def get_existing_users():
+    """Retrieve a list of existing users from the CSV file."""
+    users = set()
+    if os.path.exists(CSV_FILE):
+        with open(CSV_FILE, mode='r') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                users.add(row['username'].strip().lower())
+    return sorted(users)
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'username' in session:
@@ -85,7 +95,10 @@ def index():
         session['user_data'] = load_user_data(username)
         return redirect(url_for('grid'))
 
-    return render_template('index.html')
+    existing_users = get_existing_users()
+
+    return render_template('index.html', existing_users=existing_users)
+
 
 def remove_user_data(username, allergen, current_date):
     """Remove the user's data from the CSV file for the given date."""

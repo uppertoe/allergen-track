@@ -19,6 +19,13 @@
         .table-info {
             background-color: #d1ecf1 !important; /* Bootstrap's info background for weekends */
         }
+        /* Hover effect for table rows, respecting recorded cells */
+        tr:hover td {
+            background-color: #f0f0f0 !important; /* Light grey hover effect */
+        }
+        tr:hover td.recorded {
+            background-color: #D8BFD8 !important; /* Ensure lilac color remains on hover */
+        }
         /* Fixed top navigation for mobile */
         .fixed-top-nav {
             position: sticky;
