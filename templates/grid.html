@@ -7,31 +7,31 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        /* Color for recorded cells */
         td.recorded {
-            background-color: #D8BFD8; /* Lilac color */
+            background-color: #D8BFD8 !important; /* Lilac color */
         }
-        .allergen-row {
-            display: flex;
-            flex-wrap: wrap;
+        /* Highlight for today's row */
+        .table-warning {
+            background-color: #fff3cd !important; /* Bootstrap's warning background for today */
         }
-        .allergen-row > div {
-            flex: 1 0 100%;
+        /* Highlight for weekend rows */
+        .table-info {
+            background-color: #d1ecf1 !important; /* Bootstrap's info background for weekends */
         }
-        @media (min-width: 768px) {
-            .allergen-row > div {
-                flex: 1;
-            }
-        }
-        .sticky-nav {
+        /* Fixed top navigation for mobile */
+        .fixed-top-nav {
             position: sticky;
             top: 0;
-            z-index: 1020;
+            z-index: 1030;
             background-color: #f8f9fa;
             padding: 0.5rem;
             border-bottom: 1px solid #ddd;
         }
-        .sticky-nav a {
-            margin: 0.2rem;
+        /* Active jump-to button */
+        .allergen-links .btn.active {
+            background-color: #0d6efd;
+            color: white;
         }
         /* Fixed bottom button for mobile view */
         @media (max-width: 767px) {
@@ -46,20 +46,47 @@
                 padding: 0.5rem;
                 text-align: center;
             }
+            .allergen-links {
+                display: block;
+            }
+        }
+        @media (min-width: 768px) {
+            .allergen-links {
+                display: none;
+            }
         }
     </style>
 </head>
 <body class="bg-light">
-    <div class="container py-5">
-        <div class="d-flex justify-content-between align-items-center">
-            <h1 class="mb-4">Allergen Grid for the Past Two Weeks</h1>
+    <div class="container py-3">
+        <!-- Page Heading, User Info, and Change User Button for Large Screens -->
+        <div class="d-none d-md-flex justify-content-between align-items-center mb-4">
+            <h1 class="h1">Allergen Grid for the Past Two Weeks</h1>
             <div>
                 <span class="me-3">User: {{ session.get('username').capitalize() }}</span>
                 <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-sm">Change User</a>
             </div>
         </div>
-        
-        <div class="table-responsive d-none d-md-block">
+
+        <!-- Fixed Top Navigation for Mobile -->
+        <div class="fixed-top-nav d-block d-md-none">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h5">Allergen Grid</h1>
+                <div>
+                    <span class="me-3">User: {{ session.get('username').capitalize() }}</span>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-sm">Change User</a>
+                </div>
+            </div>
+            <div class="text-center mt-2 allergen-links">
+                <strong>Jump to:</strong>
+                {% for allergen in allergens %}
+                <a href="#{{ allergen }}" class="btn btn-outline-primary btn-sm">{{ allergen }}</a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Table for larger screens -->
+        <div class="table-responsive d-none d-md-block mt-2">
             <table class="table table-bordered table-hover">
                 <thead class="table-light">
                     <tr>
@@ -71,7 +98,7 @@
                 </thead>
                 <tbody>
                     {% for day in week_dates %}
-                    <tr>
+                    <tr class="{% if day == today %}table-warning{% elif day.weekday() >= 5 %}table-info{% endif %}">
                         <td>{{ day.strftime('%A, %d %B %Y') }}</td>
                         {% for allergen in allergens %}
                         <td class="{{ 'recorded' if grid_data[allergen][day] else '' }}"></td>
@@ -81,47 +108,69 @@
                 </tbody>
             </table>
         </div>
-        
-        <div class="d-block d-md-none">
-            <div class="sticky-nav text-center">
-                <strong>Jump to:</strong>
-                {% for allergen in allergens %}
-                <a href="#{{ allergen }}" class="btn btn-outline-primary btn-sm">{{ allergen }}</a>
-                {% endfor %}
+
+        <!-- Mobile-friendly layout with anchor links -->
+        <div class="d-block d-md-none mt-3 pt-3">
+            {% for allergen in allergens %}
+            <div id="{{ allergen }}" class="mb-4">
+                <h5 class="text-center">{{ allergen }}</h5>
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>{{ allergen }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for day in week_dates %}
+                        <tr class="{% if day == today %}table-warning{% elif day.weekday() >= 5 %}table-info{% endif %}">
+                            <td>{{ day.strftime('%A, %d %B %Y') }}</td>
+                            <td class="{{ 'recorded' if grid_data[allergen][day] else '' }}"></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            <div class="table-responsive">
-                <div class="allergen-row">
-                    {% for allergen in allergens %}
-                    <div id="{{ allergen }}">
-                        <h5 class="text-center">{{ allergen }}</h5>
-                        <table class="table table-bordered table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Date</th>
-                                    <th>{{ allergen }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for day in week_dates %}
-                                <tr>
-                                    <td>{{ day.strftime('%A, %d %B %Y') }}</td>
-                                    <td class="{{ 'recorded' if grid_data[allergen][day] else '' }}"></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+            {% endfor %}
         </div>
 
-        <!-- Visible on all screens, fixed at bottom only on mobile -->
-        <div class="text-center mt-4 fixed-bottom-button d-block">
+        <!-- Record Allergens Button -->
+        <div class="text-center mt-4 d-none d-md-block">
+            <a href="{{ url_for('tracker') }}" class="btn btn-primary w-100">Record Allergens</a>
+        </div>
+
+        <!-- Fixed Bottom Button for mobile -->
+        <div class="fixed-bottom-button d-block d-md-none">
             <a href="{{ url_for('tracker') }}" class="btn btn-primary w-100">Record Allergens</a>
         </div>
     </div>
+
     <!-- Bootstrap JS and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const allergenSections = document.querySelectorAll(".d-block.d-md-none div[id]");
+            const jumpLinks = document.querySelectorAll(".allergen-links .btn");
+
+            function onScroll() {
+                let current = "";
+                allergenSections.forEach(section => {
+                    const sectionTop = section.getBoundingClientRect().top;
+                    if (sectionTop <= 50) {
+                        current = section.getAttribute("id");
+                    }
+                });
+
+                jumpLinks.forEach(link => {
+                    link.classList.remove("active");
+                    if (link.getAttribute("href") === "#" + current) {
+                        link.classList.add("active");
+                    }
+                });
+            }
+
+            window.addEventListener("scroll", onScroll);
+        });
+    </script>
 </body>
 </html>

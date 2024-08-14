@@ -19,6 +19,9 @@ app.secret_key = os.getenv('SECRET_KEY')
 # Configure timezone from .env
 TIMEZONE = pytz.timezone(os.getenv('TIMEZONE', 'Australia/Melbourne'))
 
+# Configure session to last 7 days
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+
 # Sample allergens list
 allergens = ["Eggs", "Dairy", "Wheat", "Rice", "Soy", "Peanuts", "Tree-Nuts", "Seeds", "Shellfish", "Fish"]
 
@@ -72,13 +75,54 @@ def clear_selections_if_new_day():
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    if 'username' in session:
+        return redirect(url_for('grid'))
+    
     if request.method == 'POST':
         username = request.form.get('username').strip().lower()
         session['username'] = username
+        session.permanent = True  # Make the session last for 7 days
         session['user_data'] = load_user_data(username)
         return redirect(url_for('grid'))
 
     return render_template('index.html')
+
+def remove_user_data(username, allergen, current_date):
+    """Remove the user's data from the CSV file for the given date."""
+    if not os.path.exists(CSV_FILE):
+        return
+    
+    updated_rows = []
+    
+    with open(CSV_FILE, mode='r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            row_timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE).date()
+            if not (row['username'].strip().lower() == username.lower() and 
+                    row['allergen'] == allergen and 
+                    row_timestamp == current_date):
+                updated_rows.append(row)
+    
+    with open(CSV_FILE, mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=['username', 'allergen', 'timestamp'])
+        writer.writeheader()
+        writer.writerows(updated_rows)
+
+def get_selected_allergens(username, current_date):
+    """Get a list of allergens selected by the user on the current date."""
+    selected_allergens = []
+
+    if not os.path.exists(CSV_FILE):
+        return selected_allergens
+
+    with open(CSV_FILE, mode='r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            row_timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE).date()
+            if row['username'].strip().lower() == username.lower() and row_timestamp == current_date:
+                selected_allergens.append(row['allergen'])
+
+    return selected_allergens
 
 @app.route('/tracker', methods=['GET', 'POST'])
 def tracker():
@@ -87,32 +131,23 @@ def tracker():
     if not username:
         return redirect(url_for('index'))
     
-    # Ensure user_data is initialized for all allergens
-    if 'user_data' not in session:
-        session['user_data'] = {allergen: [] for allergen in allergens}
-
-    # Clear selections if the day has changed
-    clear_selections_if_new_day()
-
-    user_data = session['user_data']
+    current_date = datetime.now(TIMEZONE).date()
+    selected_allergens = get_selected_allergens(username, current_date)
 
     if request.method == 'POST':
         allergen = request.form.get('allergen')
-        
-        # Initialize the allergen list if it doesn't exist
-        if allergen not in user_data:
-            user_data[allergen] = []
-        
-        timestamp = datetime.now(pytz.utc).astimezone(TIMEZONE)
-        user_data[allergen].append(timestamp)
-        save_user_data(username, allergen, timestamp)
-        session['user_data'] = user_data  # Update the session with the new data
-        
-        # Store the selected allergen in session to keep the button active
-        if allergen not in session['selected_allergens']:
-            session['selected_allergens'].append(allergen)
 
-    return render_template('tracker.html', allergens=allergens)
+        if allergen in selected_allergens:
+            # Remove the allergen data for the current day
+            remove_user_data(username, allergen, current_date)
+            selected_allergens.remove(allergen)
+        else:
+            # Add the allergen data for the current day
+            timestamp = datetime.now(pytz.utc).astimezone(TIMEZONE)
+            save_user_data(username, allergen, timestamp)
+            selected_allergens.append(allergen)
+
+    return render_template('tracker.html', allergens=allergens, selected_allergens=selected_allergens, username=username)
 
 @app.route('/grid')
 def grid():
@@ -123,12 +158,12 @@ def grid():
 
     user_data = load_user_data(username)
 
-    # Calculate the start of the two-week period (starting from Monday two weeks ago)
+    # Calculate the start of the two-week period (rolling view with today at the bottom)
     today = datetime.now(TIMEZONE).date()
-    start_of_two_weeks = today - timedelta(days=today.weekday() + 7)
+    start_of_two_weeks = today - timedelta(days=13)
 
-    # Get all dates for the past two weeks (14 days)
-    week_dates = [start_of_two_weeks + timedelta(days=i) for i in range(14)]
+    # Get all dates for the past two weeks (14 days) with today at the bottom
+    week_dates = [start_of_two_weeks + timedelta(days=i) for i in range(14)][::1]
 
     # Create grid data to check if an allergen has a record for each day
     grid_data = defaultdict(lambda: defaultdict(bool))
@@ -139,7 +174,7 @@ def grid():
             if timestamp_date in week_dates:
                 grid_data[allergen][timestamp_date] = True
 
-    return render_template('grid.html', allergens=allergens, grid_data=grid_data, week_dates=week_dates)
+    return render_template('grid.html', allergens=allergens, grid_data=grid_data, week_dates=week_dates, today=today)
 
 @app.route('/logout')
 def logout():

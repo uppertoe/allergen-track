@@ -26,7 +26,7 @@
         
         <div class="row">
             <div class="col-md-8 offset-md-2">
-                <div class="card">
+                <div class="card mb-4">
                     <div class="card-header">
                         <h2 class="h5">Click to Record Allergen</h2>
                     </div>
@@ -35,17 +35,20 @@
                             {% for allergen in allergens %}
                             <form action="{{ url_for('tracker') }}" method="post" class="mb-2">
                                 <input type="hidden" name="allergen" value="{{ allergen }}">
-                                <button type="submit" class="btn btn-outline-primary w-100 {% if allergen in session.get('selected_allergens', []) %}active-button{% endif %}">{{ allergen }}</button>
+                                <button type="submit" class="btn w-100 {% if allergen in selected_allergens %}active-button btn-success{% else %}btn-outline-primary{% endif %}">
+                                    {{ allergen }}
+                                </button>
                             </form>
                             {% endfor %}
                         </div>
                     </div>
                 </div>
+
+                <!-- View Allergen Grid Button -->
+                <div class="text-center">
+                    <a href="{{ url_for('grid') }}" class="btn btn-primary w-100">View Allergen Grid</a>
+                </div>
             </div>
-        </div>
-        
-        <div class="text-center mt-4">
-            <a href="{{ url_for('grid') }}" class="btn btn-success">View Allergen Grid</a>
         </div>
     </div>
     <!-- Bootstrap JS and dependencies -->
