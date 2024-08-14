@@ -62,7 +62,9 @@ def save_user_data(username, allergen, timestamp):
     ensure_csv_header()
     with open(CSV_FILE, mode='a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([username, allergen, timestamp.isoformat()])
+        # Convert the timestamp to UTC before saving
+        timestamp_utc = timestamp.astimezone(pytz.utc)
+        writer.writerow([username, allergen, timestamp_utc.isoformat()])
 
 def clear_selections_if_new_day():
     """Clear allergen selections if the day has changed, considering the configured timezone."""
@@ -137,12 +139,12 @@ def get_selected_allergens(username, current_date):
     with open(CSV_FILE, mode='r') as file:
         reader = csv.DictReader(file)
         for row in reader:
-            row_timestamp = datetime.fromisoformat(row['timestamp']).astimezone(pytz.utc).astimezone(pytz.timezone(os.getenv("TIMEZONE", "Australia/Melbourne")))
+            # Convert the timestamp from UTC to the configured timezone
+            row_timestamp = datetime.fromisoformat(row['timestamp']).replace(tzinfo=pytz.utc).astimezone(TIMEZONE)
             if row['username'].strip().lower() == username.lower() and row_timestamp.date() == current_date:
                 selected_allergens.append(row['allergen'])
 
     return selected_allergens
-
 
 def get_current_date():
     """Return the current date based on the configured timezone."""
@@ -163,7 +165,8 @@ def tracker():
 
     if request.method == 'POST':
         allergen = request.form.get('allergen')
-        timestamp = datetime.now(pytz.utc).astimezone(pytz.timezone(os.getenv("TIMEZONE", "Australia/Melbourne")))
+        # Record the timestamp in the configured timezone and convert to UTC for storage
+        timestamp = datetime.now(TIMEZONE).astimezone(pytz.utc)
 
         if allergen in selected_allergens:
             # If allergen is already selected, remove it
@@ -175,7 +178,6 @@ def tracker():
             selected_allergens.append(allergen)
 
     return render_template('tracker.html', allergens=allergens, selected_allergens=selected_allergens)
-
 
 @app.route('/grid')
 def grid():
