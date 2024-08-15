@@ -32,7 +32,32 @@
             --bs-table-hover-bg: #D8BFD8 !important; /* Lilac color on hover */
             background-color: #D8BFD8 !important; /* Ensure lilac color remains on hover */
         }
-    
+
+        /* Sticky allergen label for mobile view */
+        .sticky-allergen {
+            position: -webkit-sticky;
+            position: sticky;
+            left: 0;
+            background-color: #f8f9fa;
+            z-index: 1;
+        }
+        
+        /* Table styling for small screens */
+        @media (max-width: 767px) {
+            .mobile-grid-container {
+                overflow-x: auto;
+            }
+            .mobile-grid-table th, 
+            .mobile-grid-table td {
+                white-space: nowrap;
+            }
+            .mobile-grid-table td.sticky-allergen {
+                min-width: 120px;
+                text-align: left;
+                background-color: #f8f9fa; /* Keeps the sticky column visible */
+            }
+        }
+        
         /* Fixed top navigation for mobile */
         .fixed-top-nav {
             position: sticky;
@@ -41,12 +66,6 @@
             background-color: #f8f9fa;
             padding: 0.5rem;
             border-bottom: 1px solid #ddd;
-        }
-    
-        /* Active jump-to button */
-        .allergen-links .btn.active {
-            background-color: #0d6efd;
-            color: white;
         }
     
         /* Fixed bottom button for mobile view */
@@ -62,18 +81,8 @@
                 padding: 0.5rem;
                 text-align: center;
             }
-            .allergen-links {
-                display: block;
-            }
-        }
-    
-        @media (min-width: 768px) {
-            .allergen-links {
-                display: none;
-            }
         }
     </style>
-    
 </head>
 <body class="bg-light">
     <div class="container pt-md-5 pb-md-3">
@@ -95,12 +104,6 @@
                     <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-sm">Change User</a>
                 </div>
             </div>
-            <div class="text-center mt-2 allergen-links">
-                <strong>Jump to:</strong>
-                {% for allergen in allergens %}
-                <a href="#{{ allergen }}" class="btn btn-outline-primary btn-sm">{{ allergen }}</a>
-                {% endfor %}
-            </div>
         </div>
 
         <!-- Table for larger screens -->
@@ -117,7 +120,7 @@
                 <tbody>
                     {% for day in week_dates %}
                     <tr class="{% if day == today %}table-warning{% elif day.weekday() >= 5 %}table-info{% endif %}">
-                        <td>{{ day.strftime('%A, %d %B %Y') }}</td>
+                        <td>{{ day.strftime('%A, %-d %B %Y') }}</td>
                         {% for allergen in allergens %}
                         <td class="{{ 'recorded' if grid_data[allergen][day] else '' }}"></td>
                         {% endfor %}
@@ -127,29 +130,30 @@
             </table>
         </div>
 
-        <!-- Mobile-friendly layout with anchor links -->
-        <div class="d-block d-md-none mt-3 pt-3">
-            {% for allergen in allergens %}
-            <div id="{{ allergen }}" class="mb-4">
-                <h5 class="text-center">{{ allergen }}</h5>
-                <table class="table table-bordered table-hover">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Date</th>
-                            <th>{{ allergen }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for day in week_dates %}
-                        <tr class="{% if day == today %}table-warning{% elif day.weekday() >= 5 %}table-info{% endif %}">
-                            <td>{{ day.strftime('%A, %d %B %Y') }}</td>
-                            <td class="{{ 'recorded' if grid_data[allergen][day] else '' }}"></td>
-                        </tr>
+        <!-- Mobile-friendly layout with allergens as rows and days as columns -->
+        <div class="mobile-grid-container d-block d-md-none mt-3 pt-3">
+            <table class="table mobile-grid-table">
+                <thead class="table-light">
+                    <tr>
+                        <th class="sticky-allergen">Allergen</th>
+                        {% for day in week_dates[::-1] %}  <!-- Reverse the order of days -->
+                        <th class="{% if day == today %}table-warning{% elif day.weekday() >= 5 %}table-info{% endif %}">
+                            {{ day.strftime('%a, %-d %b') }}
+                        </th>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for allergen in allergens %}
+                    <tr>
+                        <td class="sticky-allergen">{{ allergen }}</td>
+                        {% for day in week_dates[::-1] %}  <!-- Reverse the order of days -->
+                        <td class="{{ 'recorded' if grid_data[allergen][day] else '' }}"></td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
 
         <!-- Record Allergens Button -->
@@ -165,30 +169,5 @@
 
     <!-- Bootstrap JS and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const allergenSections = document.querySelectorAll(".d-block.d-md-none div[id]");
-            const jumpLinks = document.querySelectorAll(".allergen-links .btn");
-
-            function onScroll() {
-                let current = "";
-                allergenSections.forEach(section => {
-                    const sectionTop = section.getBoundingClientRect().top;
-                    if (sectionTop <= 50) {
-                        current = section.getAttribute("id");
-                    }
-                });
-
-                jumpLinks.forEach(link => {
-                    link.classList.remove("active");
-                    if (link.getAttribute("href") === "#" + current) {
-                        link.classList.add("active");
-                    }
-                });
-            }
-
-            window.addEventListener("scroll", onScroll);
-        });
-    </script>
 </body>
 </html>
