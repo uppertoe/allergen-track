@@ -60,6 +60,20 @@
             text-transform: uppercase;
             font-weight: 500;
         }
+
+        /* Remove focus outline when a button is clicked */
+        .btn:focus {
+            outline: none;
+            box-shadow: none; /* Removes the Bootstrap box-shadow on focus */
+        }
+
+        /* Prevent hover effects on touch devices */
+        @media (hover: none) {
+            .btn:hover {
+                background-color: inherit; /* Prevents hover color on touch devices */
+                color: inherit;
+            }
+        }
         
         .btn-primary {
             background-color: #d4a8ff;
