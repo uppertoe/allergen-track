@@ -230,6 +230,7 @@
                 } finally {
                     // Re-enable the button after the request completes
                     this.disabled = false;
+                    this.blur(); // Remove focus from the button to ensure visual state updates
                 }
             });
         });
@@ -247,8 +248,7 @@
             `;
             alertPlaceholder.innerHTML = alertHTML;
             alertPlaceholder.classList.remove('d-none'); // Make the alert visible
-        }
-        
+        }        
     </script>
 </body>
 </html>
