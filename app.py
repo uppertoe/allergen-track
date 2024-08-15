@@ -1,9 +1,10 @@
 import os
 import pytz
-from flask import Flask, render_template, request, redirect, url_for, session
-from datetime import datetime, date, timedelta
-from collections import defaultdict
 import csv
+import fcntl  # For Unix-based systems
+from flask import Flask, render_template, request, redirect, url_for, session
+from datetime import datetime, timedelta
+from collections import defaultdict
 from dotenv import load_dotenv
 
 # Set the working directory to the directory where this script is located
@@ -33,14 +34,18 @@ def ensure_csv_header():
     file_exists = os.path.exists(CSV_FILE)
     
     with open(CSV_FILE, mode='a+', newline='') as file:
-        file.seek(0)  # Go to the start of the file
-        first_line = file.readline().strip()
-        
-        if not file_exists or first_line != 'username,allergen,timestamp':
-            file.seek(0)
-            file.truncate()
-            writer = csv.writer(file)
-            writer.writerow(['username', 'allergen', 'timestamp'])
+        fcntl.flock(file, fcntl.LOCK_EX)  # Lock the file
+        try:
+            file.seek(0)  # Go to the start of the file
+            first_line = file.readline().strip()
+            
+            if not file_exists or first_line != 'username,allergen,timestamp':
+                file.seek(0)
+                file.truncate()
+                writer = csv.writer(file)
+                writer.writerow(['username', 'allergen', 'timestamp'])
+        finally:
+            fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
 
 def load_user_data(username):
     """Load the user's data from the CSV file."""
@@ -49,11 +54,15 @@ def load_user_data(username):
     
     if os.path.exists(CSV_FILE):
         with open(CSV_FILE, mode='r') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                if row['username'].strip().lower() == username.lower():
-                    timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE)
-                    user_data[row['allergen']].append(timestamp)
+            fcntl.flock(file, fcntl.LOCK_SH)  # Shared lock for reading
+            try:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    if row['username'].strip().lower() == username.lower():
+                        timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE)
+                        user_data[row['allergen']].append(timestamp)
+            finally:
+                fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
     
     return user_data
 
@@ -61,43 +70,28 @@ def save_user_data(username, allergen, timestamp):
     """Save the user's data to the CSV file."""
     ensure_csv_header()
     with open(CSV_FILE, mode='a', newline='') as file:
-        writer = csv.writer(file)
-        # Convert the timestamp to UTC before saving
-        timestamp_utc = timestamp.astimezone(pytz.utc)
-        writer.writerow([username, allergen, timestamp_utc.isoformat()])
+        fcntl.flock(file, fcntl.LOCK_EX)  # Lock the file for writing
+        try:
+            writer = csv.writer(file)
+            # Convert the timestamp to UTC before saving
+            timestamp_utc = timestamp.astimezone(pytz.utc)
+            writer.writerow([username, allergen, timestamp_utc.isoformat()])
+        finally:
+            fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
 
 def get_existing_users():
     """Retrieve a list of existing users from the CSV file."""
     users = set()
     if os.path.exists(CSV_FILE):
         with open(CSV_FILE, mode='r') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                users.add(row['username'].strip().lower())
+            fcntl.flock(file, fcntl.LOCK_SH)  # Shared lock for reading
+            try:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    users.add(row['username'].strip().lower())
+            finally:
+                fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
     return sorted(users)
-
-@app.errorhandler(403)
-def handle_403_error(e):
-    """Handle 403 errors by clearing the session and redirecting to the index."""
-    session.clear()
-    return redirect(url_for('index'))
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if 'username' in session:
-        return redirect(url_for('grid'))
-    
-    if request.method == 'POST':
-        username = request.form.get('username').strip().lower()
-        session['username'] = username
-        session.permanent = True  # Make the session last for 7 days
-        session['user_data'] = load_user_data(username)
-        return redirect(url_for('grid'))
-
-    existing_users = get_existing_users()
-
-    return render_template('index.html', existing_users=existing_users)
-
 
 def remove_user_data(username, allergen, current_date):
     """Remove the user's data from the CSV file for the given date."""
@@ -106,19 +100,25 @@ def remove_user_data(username, allergen, current_date):
     
     updated_rows = []
     
-    with open(CSV_FILE, mode='r') as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            row_timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE).date()
-            if not (row['username'].strip().lower() == username.lower() and 
-                    row['allergen'] == allergen and 
-                    row_timestamp == current_date):
-                updated_rows.append(row)
-    
-    with open(CSV_FILE, mode='w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=['username', 'allergen', 'timestamp'])
-        writer.writeheader()
-        writer.writerows(updated_rows)
+    with open(CSV_FILE, mode='r+') as file:
+        fcntl.flock(file, fcntl.LOCK_EX)  # Lock the file for reading and writing
+        try:
+            reader = csv.DictReader(file)
+            for row in reader:
+                row_timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE).date()
+                if not (row['username'].strip().lower() == username.lower() and 
+                        row['allergen'] == allergen and 
+                        row_timestamp == current_date):
+                    updated_rows.append(row)
+
+            # Write back the updated rows
+            file.seek(0)
+            file.truncate()
+            writer = csv.DictWriter(file, fieldnames=['username', 'allergen', 'timestamp'])
+            writer.writeheader()
+            writer.writerows(updated_rows)
+        finally:
+            fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
 
 def get_selected_allergens(username, current_date):
     """Get a list of allergens selected by the user on the current date."""
@@ -128,12 +128,16 @@ def get_selected_allergens(username, current_date):
         return selected_allergens
 
     with open(CSV_FILE, mode='r') as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            # Convert the timestamp from UTC to the configured timezone
-            row_timestamp = datetime.fromisoformat(row['timestamp']).replace(tzinfo=pytz.utc).astimezone(TIMEZONE)
-            if row['username'].strip().lower() == username.lower() and row_timestamp.date() == current_date:
-                selected_allergens.append(row['allergen'])
+        fcntl.flock(file, fcntl.LOCK_SH)  # Shared lock for reading
+        try:
+            reader = csv.DictReader(file)
+            for row in reader:
+                # Convert the timestamp from UTC to the configured timezone
+                row_timestamp = datetime.fromisoformat(row['timestamp']).replace(tzinfo=pytz.utc).astimezone(TIMEZONE)
+                if row['username'].strip().lower() == username.lower() and row_timestamp.date() == current_date:
+                    selected_allergens.append(row['allergen'])
+        finally:
+            fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
 
     return selected_allergens
 
