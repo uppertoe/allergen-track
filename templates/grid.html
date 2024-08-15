@@ -3,29 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Allergen Grid</title>
+    <title>Allergen Track | Grid</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Color for recorded cells */
+        /* General styling for recorded cells */
         td.recorded {
             background-color: #D8BFD8 !important; /* Lilac color */
         }
+    
         /* Highlight for today's row */
-        .table-warning {
-            background-color: #fff3cd !important; /* Bootstrap's warning background for today */
+        .table-warning td {
+            background-color: #fff3cd; /* Bootstrap's warning background for today */
         }
+    
         /* Highlight for weekend rows */
-        .table-info {
-            background-color: #d1ecf1 !important; /* Bootstrap's info background for weekends */
+        .table-info td {
+            background-color: #d1ecf1; /* Bootstrap's info background for weekends */
         }
+    
         /* Hover effect for table rows, respecting recorded cells */
-        tr:hover td {
+        tr:hover td:not(.recorded) {
             background-color: #f0f0f0 !important; /* Light grey hover effect */
         }
+        
+        /* Override Bootstrap hover background color for recorded cells */
         tr:hover td.recorded {
+            --bs-table-hover-bg: #D8BFD8 !important; /* Lilac color on hover */
             background-color: #D8BFD8 !important; /* Ensure lilac color remains on hover */
         }
+    
         /* Fixed top navigation for mobile */
         .fixed-top-nav {
             position: sticky;
@@ -35,11 +42,13 @@
             padding: 0.5rem;
             border-bottom: 1px solid #ddd;
         }
+    
         /* Active jump-to button */
         .allergen-links .btn.active {
             background-color: #0d6efd;
             color: white;
         }
+    
         /* Fixed bottom button for mobile view */
         @media (max-width: 767px) {
             .fixed-bottom-button {
@@ -57,12 +66,14 @@
                 display: block;
             }
         }
+    
         @media (min-width: 768px) {
             .allergen-links {
                 display: none;
             }
         }
     </style>
+    
 </head>
 <body class="bg-light">
     <div class="container pt-md-5 pb-md-3">
