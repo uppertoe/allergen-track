@@ -99,28 +99,30 @@ def remove_user_data(username, allergen, current_date):
     """Remove the user's data from the CSV file for the given date."""
     if not os.path.exists(CSV_FILE):
         return
-    
-    updated_rows = []
-    
-    with open(CSV_FILE, mode='r+') as file:
-        fcntl.flock(file, fcntl.LOCK_EX)  # Lock the file for reading and writing
-        try:
-            reader = csv.DictReader(file)
-            for row in reader:
-                row_timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE).date()
-                if not (row['username'].strip().lower() == username.lower() and 
-                        row['allergen'] == allergen and 
-                        row_timestamp == current_date):
-                    updated_rows.append(row)
 
-            # Write back the updated rows
-            file.seek(0)
-            file.truncate()
-            writer = csv.DictWriter(file, fieldnames=['username', 'allergen', 'timestamp'])
-            writer.writeheader()
-            writer.writerows(updated_rows)
-        finally:
-            fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
+    # Load all data into memory first
+    rows_to_keep = []
+    
+    with open(CSV_FILE, mode='r') as file:
+        fcntl.flock(file, fcntl.LOCK_SH)  # Shared lock for reading
+        reader = csv.DictReader(file)
+        for row in reader:
+            row_timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE).date()
+            if not (row['username'].strip().lower() == username.lower() and 
+                    row['allergen'] == allergen and 
+                    row_timestamp == current_date):
+                rows_to_keep.append(row)
+        fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
+    
+    # Now write only the remaining rows back to the file
+    with open(CSV_FILE, mode='w', newline='') as file:
+        fcntl.flock(file, fcntl.LOCK_EX)  # Lock the file for writing
+        writer = csv.DictWriter(file, fieldnames=['username', 'allergen', 'timestamp'])
+        writer.writeheader()
+        writer.writerows(rows_to_keep)
+        fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
+
+
 
 def get_selected_allergens(username, current_date):
     """Get a list of allergens selected by the user on the current date."""
