@@ -192,8 +192,10 @@
                 const csrfToken = form.querySelector('input[name="csrf_token"]').value;
         
                 const isActive = this.classList.contains('active-button');
-        
-                // Disable the button to prevent multiple clicks during the request
+                
+                // Optimistically update the UI before the request completes
+                this.classList.toggle('active-button', !isActive);
+                this.classList.toggle('btn-outline-primary', isActive);
                 this.disabled = true;
         
                 // Clear any previous alerts and hide the placeholder
@@ -201,35 +203,47 @@
                 alertPlaceholder.classList.add('d-none');
                 alertPlaceholder.innerHTML = '';
         
+                const timeout = 5000; // 5 seconds timeout
+                let didTimeout = false;
+        
+                // Custom timeout promise
+                const timerPromise = new Promise((_, reject) => 
+                    setTimeout(() => {
+                        didTimeout = true;
+                        reject(new Error('Request timed out'));
+                    }, timeout)
+                );
+        
                 try {
-                    const response = await fetch("{{ url_for('tracker') }}", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/x-www-form-urlencoded",
-                            "X-CSRFToken": csrfToken
-                        },
-                        body: new URLSearchParams({ allergen, csrf_token: csrfToken })
-                    });
+                    const response = await Promise.race([
+                        fetch("{{ url_for('tracker') }}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/x-www-form-urlencoded",
+                                "X-CSRFToken": csrfToken
+                            },
+                            body: new URLSearchParams({ allergen, csrf_token: csrfToken })
+                        }),
+                        timerPromise
+                    ]);
         
-                    const data = await response.json();
+                    if (!didTimeout) {
+                        const data = await response.json();
         
-                    if (data.status === 'success') {
-                        if (isActive) {
-                            this.classList.remove('active-button');
-                            this.classList.add('btn-outline-primary');
-                        } else {
-                            this.classList.add('active-button');
-                            this.classList.remove('btn-outline-primary');
+                        if (data.status !== 'success') {
+                            throw new Error('Unexpected status: ' + data.status);
                         }
-                    } else {
-                        throw new Error('Unexpected status: ' + data.status);
                     }
                 } catch (error) {
                     console.error('Error:', error);
+        
+                    // Revert the button state if the request failed or timed out
+                    this.classList.toggle('active-button', isActive);
+                    this.classList.toggle('btn-outline-primary', !isActive);
+        
                     displayBootstrapAlert('An error occurred while processing your request. Please try again.', 'danger');
                 } finally {
-                    // Re-enable the button after the request completes
-                    this.disabled = false;
+                    this.disabled = false; // Re-enable the button after request completes
                     this.blur(); // Remove focus from the button to ensure visual state updates
                 }
             });
@@ -248,7 +262,8 @@
             `;
             alertPlaceholder.innerHTML = alertHTML;
             alertPlaceholder.classList.remove('d-none'); // Make the alert visible
-        }        
+        }
+            
     </script>
 </body>
 </html>
