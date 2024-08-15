@@ -3,92 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Allergen Track | Grid</title>
+    <title>AlleTrack | Grid</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Pacifico&display=swap" rel="stylesheet">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='icons/favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='icons/site.webmanifest') }}">
+    <link rel="icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/android-chrome-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='icons/android-chrome-512x512.png') }}">
     <style>
-        /* General styling for recorded cells */
-        td.recorded {
-            background-color: #D8BFD8 !important; /* Lilac color */
-        }
-    
-        /* Highlight for today's row */
-        .table-warning td {
-            background-color: #fff3cd; /* Bootstrap's warning background for today */
-        }
-    
-        /* Highlight for weekend rows */
-        .table-info td {
-            background-color: #d1ecf1; /* Bootstrap's info background for weekends */
-        }
-    
-        /* Hover effect for table rows, respecting recorded cells */
-        tr:hover td:not(.recorded) {
-            background-color: #f0f0f0 !important; /* Light grey hover effect */
-        }
-        
-        /* Override Bootstrap hover background color for recorded cells */
-        tr:hover td.recorded {
-            --bs-table-hover-bg: #D8BFD8 !important; /* Lilac color on hover */
-            background-color: #D8BFD8 !important; /* Ensure lilac color remains on hover */
+        /* General page styling */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            color: #424242;
+            margin: 0;
+            padding: 0;
         }
 
-        /* Sticky allergen label for mobile view */
+        h1, h5 {
+            font-weight: 500;
+            color: #212121;
+            margin-bottom: 16px;
+        }
+
+        /* AlleTrack Heading */
+        .alletrack-heading {
+            font-family: 'Pacifico';
+            color: #757575;
+        }
+
+        /* Material Design buttons */
+        .btn {
+            border-radius: 4px;
+            padding: 10px 20px;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background-color: #d4a8ff;
+            border: none;
+            color: white;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary:hover {
+            background-color: #bb86fc;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-outline-secondary {
+            border-color: #757575;
+            color: #757575;
+            background-color: transparent;
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: #757575;
+            color: white;
+        }
+
+        /* Elevated cards */
+        .card {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.16);
+            margin-bottom: 24px;
+            padding: 24px;
+        }
+
+        /* Table styles */
+        .table {
+            width: 100%;
+            margin: 0;
+            border-spacing: 0;
+            border-collapse: separate;
+        }
+
+        .table th, .table td {
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .table th {
+            background-color: #e8eaf6;
+            color: #424242;
+            text-transform: uppercase;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .table tr {
+            border-bottom: 1px solid #eeeeee;
+        }
+
+        /* Row highlights */
+        .highlighted-column {
+            background-color: #ffecb3 !important;
+        }
+
+        .highlighted-weekend-column {
+            background-color: #b3e5fc !important;
+        }
+
+        td.recorded {
+            background-color: #bb86fc !important;
+            color: white;
+        }
+
+        /* Sticky allergen label */
         .sticky-allergen {
-            position: -webkit-sticky;
             position: sticky;
             left: 0;
-            background-color: #f8f9fa;
-            z-index: 1;
+            background-color: #f5f5f5;
+            color: #424242;
+            text-align: left;
+            font-weight: 500;
+            z-index: 3;
+            border-right: 1px solid #eeeeee;
+            min-width: 120px;
+            padding: 0px;
+            background-clip: padding-box;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
         }
-        
-        /* Table styling for small screens */
-        @media (max-width: 767px) {
+
+        /* General container padding */
+        .mobile-grid-container {
+            padding: 0;
+            overflow-x: auto;
+            position: relative;
+            background-color: #f5f5f5;
+        }
+
+        /* Mobile-friendly layout for sticky allergen */
+        @media (max-width: 1999px) {
             .mobile-grid-container {
+                padding: 0px;
                 overflow-x: auto;
+                position: relative;
             }
             .mobile-grid-table th, 
             .mobile-grid-table td {
                 white-space: nowrap;
+                border-bottom: 1px solid #eeeeee;
+                padding: 16px;
             }
             .mobile-grid-table td.sticky-allergen {
-                min-width: 120px;
-                text-align: left;
-                background-color: #f8f9fa; /* Keeps the sticky column visible */
+                background-color: #f5f5f5;
+                z-index: 3;
+                padding-left: 8px;
             }
         }
-        
+
         /* Fixed top navigation for mobile */
         .fixed-top-nav {
             position: sticky;
             top: 0;
             z-index: 1030;
-            background-color: #f8f9fa;
-            padding: 0.5rem;
-            border-bottom: 1px solid #ddd;
+            background-color: #ffffff;
+            padding: 8px 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid #eeeeee;
         }
-    
+
+        .fixed-top-nav h5 {
+            margin: 0;
+            font-weight: 500;
+        }
+
         /* Fixed bottom button for mobile view */
-        @media (max-width: 767px) {
+        @media (max-width: 1999px) {
             .fixed-bottom-button {
                 position: fixed;
                 bottom: 0;
                 left: 0;
                 width: 100%;
                 z-index: 1030;
-                background-color: white;
-                border-top: 1px solid #ddd;
-                padding: 0.5rem;
+                background-color: #d4a8ff;
+                padding: 12px;
                 text-align: center;
+                box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+                color: white;
+                text-transform: uppercase;
+            }
+            .mobile-grid-container {
+                margin-bottom: 60px;
             }
         }
     </style>
 </head>
-<body class="bg-light">
-    <div class="container pt-md-5 pb-md-3">
+<body>
+    <div class="container pt-xl-5 pb-xl-3">
         <!-- Page Heading, User Info, and Change User Button for Large Screens -->
-        <div class="d-none d-md-flex justify-content-between align-items-center mb-4">
-            <h1 class="h1">Allergen Grid for the Past Two Weeks</h1>
+        <div class="d-none d-xl-flex justify-content-between align-items-center mb-4 ms-4">
+            <h1 class="alletrack-heading">AlleTrack</h1>
             <div>
                 <span class="me-3">User: {{ session.get('username').capitalize() }}</span>
                 <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-sm">Change User</a>
@@ -96,9 +211,9 @@
         </div>
 
         <!-- Fixed Top Navigation for Mobile -->
-        <div class="fixed-top-nav d-block d-md-none">
+        <div class="fixed-top-nav d-block d-xl-none">
             <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h5">Allergen Grid</h1>
+                <h5 class="alletrack-heading">AlleTrack</h5>
                 <div>
                     <span class="me-3">User: {{ session.get('username').capitalize() }}</span>
                     <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-sm">Change User</a>
@@ -107,9 +222,9 @@
         </div>
 
         <!-- Table for larger screens -->
-        <div class="table-responsive d-none d-md-block mt-2">
+        <div class="table-responsive d-none d-xl-block mt-2 card">
             <table class="table table-bordered table-hover">
-                <thead class="table-light">
+                <thead>
                     <tr>
                         <th>Date</th>
                         {% for allergen in allergens %}
@@ -119,10 +234,12 @@
                 </thead>
                 <tbody>
                     {% for day in week_dates %}
-                    <tr class="{% if day == today %}table-warning{% elif day.weekday() >= 5 %}table-info{% endif %}">
-                        <td>{{ day.strftime('%A, %-d %B %Y') }}</td>
+                    <tr>
+                        <td class="{% if day == today %}highlighted-column{% elif day.weekday() >= 5 %}highlighted-weekend-column{% endif %}">
+                            {{ day.strftime('%A, %-d %B %Y') }}
+                        </td>
                         {% for allergen in allergens %}
-                        <td class="{{ 'recorded' if grid_data[allergen][day] else '' }}"></td>
+                        <td class="{{ 'recorded' if grid_data[allergen][day] else '' }} {% if day == today %}highlighted-column{% elif day.weekday() >= 5 %}highlighted-weekend-column{% endif %}"></td>
                         {% endfor %}
                     </tr>
                     {% endfor %}
@@ -131,13 +248,13 @@
         </div>
 
         <!-- Mobile-friendly layout with allergens as rows and days as columns -->
-        <div class="mobile-grid-container d-block d-md-none mt-3 pt-3">
+        <div class="mobile-grid-container d-block d-xl-none mt-3 pt-0 card">
             <table class="table mobile-grid-table">
-                <thead class="table-light">
+                <thead>
                     <tr>
                         <th class="sticky-allergen">Allergen</th>
-                        {% for day in week_dates[::-1] %}  <!-- Reverse the order of days -->
-                        <th class="{% if day == today %}table-warning{% elif day.weekday() >= 5 %}table-info{% endif %}">
+                        {% for day in week_dates[::-1] %}
+                        <th class="{% if day == today %}highlighted-column{% elif day.weekday() >= 5 %}highlighted-weekend-column{% endif %}">
                             {{ day.strftime('%a, %-d %b') }}
                         </th>
                         {% endfor %}
@@ -147,8 +264,8 @@
                     {% for allergen in allergens %}
                     <tr>
                         <td class="sticky-allergen">{{ allergen }}</td>
-                        {% for day in week_dates[::-1] %}  <!-- Reverse the order of days -->
-                        <td class="{{ 'recorded' if grid_data[allergen][day] else '' }}"></td>
+                        {% for day in week_dates[::-1] %}
+                        <td class="{{ 'recorded' if grid_data[allergen][day] else '' }} {% if day == today %}highlighted-column{% elif day.weekday() >= 5 %}highlighted-weekend-column{% endif %}"></td>
                         {% endfor %}
                     </tr>
                     {% endfor %}
@@ -157,17 +274,14 @@
         </div>
 
         <!-- Record Allergens Button -->
-        <div class="text-center mt-4 d-none d-md-block">
+        <div class="text-center mt-4 d-none d-xl-block">
             <a href="{{ url_for('tracker') }}" class="btn btn-primary w-100">Record Allergens</a>
         </div>
 
         <!-- Fixed Bottom Button for mobile -->
-        <div class="fixed-bottom-button d-block d-md-none">
-            <a href="{{ url_for('tracker') }}" class="btn btn-primary w-100">Record Allergens</a>
+        <div class="fixed-bottom-button d-block d-xl-none">
+            <a href="{{ url_for('tracker') }}" class="btn w-100">Record Allergens</a>
         </div>
     </div>
-
-    <!-- Bootstrap JS and dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

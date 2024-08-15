@@ -3,45 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Allergen Track</title>
+    <title>AlleTrack</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Pacifico&display=swap" rel="stylesheet">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='icons/favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='icons/site.webmanifest') }}">
+    <link rel="icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/android-chrome-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='icons/android-chrome-512x512.png') }}">
     <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            color: #424242;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* AlleTrack Heading */
+        .alletrack-heading {
+            font-family: 'Pacifico', cursive;
+            color: #757575;
+            text-align: center;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.16);
+            margin-bottom: 24px;
+            padding: 24px;
+        }
+
+        .btn {
+            border-radius: 4px;
+            padding: 10px 20px;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background-color: #d4a8ff;
+            border: none;
+            color: white;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary:hover {
+            background-color: #bb86fc;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-outline-primary {
+            border-color: #8e7cc3;
+            color: #8e7cc3;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: #8e7cc3;
+            color: white;
+        }
+
         .container {
-            max-width: 500px; /* Make the container narrower on large screens */
+            max-width: 500px;
+            padding-top: 50px;
+        }
+
+        .input-group input {
+            border-radius: 4px;
+            box-shadow: none;
+        }
+
+        .input-group button {
+            margin-top: 16px;
+        }
+
+        .list-group button {
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .list-group button:hover {
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
 <body class="bg-light">
-    <div class="container py-5">
-        <h1 class="mb-4">Allergen Track</h1>
+    <div class="container">
+        <h1 class="alletrack-heading mb-4">AlleTrack</h1>
 
         <!-- Create New User -->
-        <div class="mb-4">
-            <h2 class="h5">Create a New User</h2>
-            <form action="{{ url_for('index') }}" method="post">
-                <div class="input-group">
-                    <input type="text" name="username" class="form-control" placeholder="Enter new username" required autofocus>
-                    <button type="submit" class="btn btn-primary">Create User</button>
-                </div>
-            </form>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="h5">Create a New User</h2>
+                <form action="{{ url_for('index') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <!-- CSRF Token -->
+                    <div class="input-group">
+                        <input type="text" name="username" class="form-control" placeholder="Enter new username" required autofocus>
+                        <button type="submit" class="btn btn-primary w-100">Create User</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <!-- Existing Users -->
-        <div class="mb-4">
-            <h2 class="h5">Existing Users</h2>
-            <div class="list-group">
-                {% for user in existing_users %}
-                <form action="{{ url_for('index') }}" method="post" class="mb-2">
-                    <input type="hidden" name="username" value="{{ user }}">
-                    <button type="submit" class="btn btn-outline-primary w-100">{{ user.capitalize() }}</button>
-                </form>
-                {% endfor %}
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h5">Existing Users</h2>
+                <div class="list-group">
+                    {% for user in existing_users %}
+                    <form action="{{ url_for('index') }}" method="post" class="mb-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <!-- CSRF Token -->
+                        <input type="hidden" name="username" value="{{ user }}">
+                        <button type="submit" class="btn btn-outline-primary w-100">{{ user.capitalize() }}</button>
+                    </form>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
-
-    <!-- Bootstrap JS and dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

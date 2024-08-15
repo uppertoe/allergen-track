@@ -2,10 +2,11 @@ import os
 import pytz
 import csv
 import fcntl  # For Unix-based systems
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from datetime import datetime, timedelta
 from collections import defaultdict
 from dotenv import load_dotenv
+from flask_wtf.csrf import CSRFProtect
 
 # Set the working directory to the directory where this script is located
 app_dir = os.path.dirname(os.path.abspath(__file__))
@@ -16,6 +17,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
+csrf = CSRFProtect(app)
 
 # Configure timezone from .env
 TIMEZONE = pytz.timezone(os.getenv('TIMEZONE', 'Australia/Melbourne'))
@@ -182,10 +184,16 @@ def tracker():
             # If allergen is already selected, remove it
             remove_user_data(username, allergen, current_date)
             selected_allergens.remove(allergen)
+            action = 'removed'
         else:
             # Add the allergen data for the current day
             save_user_data(username, allergen, timestamp)
             selected_allergens.append(allergen)
+            action = 'added'
+
+        # Check if the request is expecting a JSON response (typically from AJAX)
+        if request.accept_mimetypes['application/json'] >= request.accept_mimetypes['text/html']:
+            return jsonify({'status': 'success', 'action': action})
 
     return render_template('tracker.html', allergens=allergens, selected_allergens=selected_allergens)
 
