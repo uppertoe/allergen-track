@@ -22,6 +22,7 @@
             color: #424242;
             margin: 0;
             padding: 0;
+            padding-bottom: 60px; /* Space for the sticky button */
         }
 
         /* AlleTrack Heading */
@@ -36,6 +37,20 @@
             box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.16);
             margin-bottom: 24px;
             padding: 24px;
+        }
+
+        .card-header {
+            padding-bottom: 0;
+            margin-bottom: 16px;
+            border-bottom: none;
+            background-color: transparent;
+        }
+
+        .card-header h2 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: #424242;
+            margin: 0;
         }
 
         .btn {
@@ -86,34 +101,32 @@
         }
 
         /* Fixed Top Navigation for mobile view */
-        @media (max-width: 1199px) {
-            .fixed-top-nav {
-                position: sticky;
-                top: 0;
-                z-index: 1030;
-                background-color: #f5f5f5;
-                padding: 12px;
-                border-bottom: 1px solid #ddd;
-            }
+        .fixed-top-nav {
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+            background-color: #f5f5f5;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
 
-            .fixed-bottom-button {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                z-index: 1030;
-                background-color: #d4a8ff;
-                padding: 12px;
-                text-align: center;
-                box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-                color: white;
-                text-transform: uppercase;
-            }
+        /* Sticky bottom button for all screen sizes */
+        .sticky-bottom-button {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1030;
+            background-color: #d4a8ff;
+            padding: 12px;
+            text-align: center;
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+            color: white;
+            text-transform: uppercase;
+        }
 
-            .container {
-                padding-top: 60px;
-                padding-bottom: 60px;
-            }
+        .container {
+            padding-top: 60px; /* Space for the fixed top navigation */
         }
     </style>
 </head>
@@ -143,7 +156,7 @@
             <div class="col-xl-8 offset-xl-2">
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="h5">Click to Record Allergen</h2>
+                        <h2>Click to Record Allergen</h2>
                     </div>
                     <div class="card-body">
                         <div class="list-group">
@@ -160,14 +173,9 @@
                     </div>
                 </div>
 
-                <!-- View Allergen Grid Button -->
-                <div class="fixed-bottom-button d-block d-xl-none">
+                <!-- Sticky Bottom Button -->
+                <div class="sticky-bottom-button">
                     <a href="{{ url_for('grid') }}" class="btn w-100">View Allergen Grid</a>
-                </div>
-
-                <!-- View Allergen Grid Button for larger screens -->
-                <div class="text-center mt-4 d-none d-xl-block">
-                    <a href="{{ url_for('grid') }}" class="btn btn-primary w-100">View Allergen Grid</a>
                 </div>
             </div>
         </div>

@@ -23,6 +23,7 @@
             color: #424242;
             margin: 0;
             padding: 0;
+            padding-bottom: 60px; /* Space for the sticky button */
         }
 
         h1, h5 {
@@ -90,6 +91,16 @@
             padding: 8px;
             text-align: center;
             vertical-align: middle;
+        }
+
+        /* Wider date column */
+        .table th:first-child, .table td:first-child {
+            width: 300px; /* Adjust as needed for the date column */
+        }
+
+        /* Consistent width for allergen columns */
+        .table th:not(:first-child), .table td:not(:first-child) {
+            width: 80px; /* Adjust as needed for the allergen columns */
         }
 
         .table th {
@@ -178,24 +189,19 @@
             font-weight: 500;
         }
 
-        /* Fixed bottom button for mobile view */
-        @media (max-width: 1999px) {
-            .fixed-bottom-button {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                z-index: 1030;
-                background-color: #d4a8ff;
-                padding: 12px;
-                text-align: center;
-                box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-                color: white;
-                text-transform: uppercase;
-            }
-            .mobile-grid-container {
-                margin-bottom: 60px;
-            }
+        /* Sticky bottom button for all screen sizes */
+        .sticky-bottom-button {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1030;
+            background-color: #d4a8ff;
+            padding: 12px;
+            text-align: center;
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+            color: white;
+            text-transform: uppercase;
         }
     </style>
 </head>
@@ -272,16 +278,11 @@
                 </tbody>
             </table>
         </div>
+    </div>
 
-        <!-- Record Allergens Button -->
-        <div class="text-center mt-4 d-none d-xl-block">
-            <a href="{{ url_for('tracker') }}" class="btn btn-primary w-100">Record Allergens</a>
-        </div>
-
-        <!-- Fixed Bottom Button for mobile -->
-        <div class="fixed-bottom-button d-block d-xl-none">
-            <a href="{{ url_for('tracker') }}" class="btn w-100">Record Allergens</a>
-        </div>
+    <!-- Sticky Bottom Button for all screen sizes -->
+    <div class="sticky-bottom-button">
+        <a href="{{ url_for('tracker') }}" class="btn w-100">Record Allergens</a>
     </div>
 </body>
 </html>
