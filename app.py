@@ -145,6 +145,22 @@ def get_current_date():
     """Return the current date based on the configured timezone."""
     return datetime.now(TIMEZONE).date()
 
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if 'username' in session:
+        return redirect(url_for('grid'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username').strip().lower()
+        session['username'] = username
+        session.permanent = True  # Make the session last for 7 days
+        session['user_data'] = load_user_data(username)
+        return redirect(url_for('grid'))
+
+    existing_users = get_existing_users()
+
+    return render_template('index.html', existing_users=existing_users)
+
 @app.route('/tracker', methods=['GET', 'POST'])
 def tracker():
     username = session.get('username')
