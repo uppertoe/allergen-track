@@ -52,7 +52,7 @@ def load_user_data(username):
             reader = csv.DictReader(file)
             for row in reader:
                 if row['username'].strip().lower() == username.lower():
-                    timestamp = datetime.fromisoformat(row['timestamp'])
+                    timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE)
                     user_data[row['allergen']].append(timestamp)
     
     return user_data
@@ -65,15 +65,6 @@ def save_user_data(username, allergen, timestamp):
         # Convert the timestamp to UTC before saving
         timestamp_utc = timestamp.astimezone(pytz.utc)
         writer.writerow([username, allergen, timestamp_utc.isoformat()])
-
-def clear_selections_if_new_day():
-    """Clear allergen selections if the day has changed, considering the configured timezone."""
-    today = datetime.now(TIMEZONE).date().isoformat()
-    last_recorded_date = session.get('last_recorded_date')
-
-    if last_recorded_date != today:
-        session['selected_allergens'] = []
-        session['last_recorded_date'] = today
 
 def get_existing_users():
     """Retrieve a list of existing users from the CSV file."""
@@ -148,8 +139,7 @@ def get_selected_allergens(username, current_date):
 
 def get_current_date():
     """Return the current date based on the configured timezone."""
-    timezone = pytz.timezone(os.getenv("TIMEZONE", "Australia/Melbourne"))
-    return datetime.now(timezone).date()
+    return datetime.now(TIMEZONE).date()
 
 @app.route('/tracker', methods=['GET', 'POST'])
 def tracker():
