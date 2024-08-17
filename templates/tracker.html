@@ -145,6 +145,11 @@
         .container {
             padding-top: 60px; /* Space for the fixed top navigation */
         }
+
+        .fixed-top-nav h5 {
+            margin: 0;
+            font-weight: 500;
+        }
         
     </style>
 </head>
@@ -154,7 +159,7 @@
         <div class="d-flex justify-content-between align-items-center">
             <h1 class="alletrack-heading h5">AlleTrack</h1>
             <div>
-                <span class="me-3">User: {{ session.get('username').capitalize() }}</span>
+                <span class="me-3 align-middle">User: {{ session.get('username').capitalize() }}</span>
                 <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-sm">Change User</a>
             </div>
         </div>
@@ -166,7 +171,7 @@
         <div class="d-none d-xl-flex justify-content-between align-items-center mb-4 ms-4">
             <h1 class="alletrack-heading">AlleTrack</h1>
             <div>
-                <span class="me-3">User: {{ session.get('username').capitalize() }}</span>
+                <span class="me-3 align-middle">User: {{ session.get('username').capitalize() }}</span>
                 <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-sm">Change User</a>
             </div>
         </div>

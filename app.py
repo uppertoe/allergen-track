@@ -25,8 +25,8 @@ TIMEZONE = pytz.timezone(os.getenv('TIMEZONE', 'Australia/Melbourne'))
 # Configure session to last 7 days
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
-# Sample allergens list
-allergens = ["Eggs", "Dairy", "Wheat", "Rice", "Soy", "Peanuts", "Tree-Nuts", "Seeds", "Shellfish", "Fish"]
+# Allergens list
+allergens = ["Eggs", "Baked Egg", "Dairy", "Wheat", "Rice", "Soy", "Peanuts", "Tree-Nuts", "Sesame", "Seeds", "Shellfish", "Fish"]
 
 # Path to the CSV file
 CSV_FILE = os.path.join(app_dir, 'user_data.csv')
