@@ -26,7 +26,7 @@ TIMEZONE = pytz.timezone(os.getenv('TIMEZONE', 'Australia/Melbourne'))
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 # Allergens list
-allergens = ["Eggs", "Baked Egg", "Rice", "Oat", "Peanuts", "Almond", "Hazelnut", "Cashew", "Macadamia", "Pistachio", "Pine Nut", "Other Treenuts", "Sesame", "Seeds", "Shellfish", "Fish"]
+allergens = ["Eggs", "Baked Egg", "Rice", "Oat", "Sesame", "Seeds", "Shellfish", "Fish", "Peanuts", "Almond", "Hazelnut", "Cashew", "Macadamia", "Pistachio", "Pine Nut", "Other Treenuts"]
 
 # Path to the CSV file
 CSV_FILE = os.path.join(app_dir, 'user_data.csv')
