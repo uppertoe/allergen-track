@@ -242,7 +242,7 @@
                     {% for day in week_dates %}
                     <tr>
                         <td class="{% if day == today %}highlighted-column{% elif day.weekday() >= 5 %}highlighted-weekend-column{% endif %}">
-                            {{ day.strftime('%A, %-d %B %Y') }}
+                            {{ day.strftime('%a, %-d %b') }}
                         </td>
                         {% for allergen in allergens %}
                         <td class="{{ 'recorded' if grid_data[allergen][day] else '' }} {% if day == today %}highlighted-column{% elif day.weekday() >= 5 %}highlighted-weekend-column{% endif %}"></td>
