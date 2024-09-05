@@ -1,12 +1,12 @@
 import os
 import pytz
 import csv
-import fcntl  # For Unix-based systems
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from datetime import datetime, timedelta
 from collections import defaultdict
 from dotenv import load_dotenv
 from flask_wtf.csrf import CSRFProtect
+from flask_sqlalchemy import SQLAlchemy
 
 # Set the working directory to the directory where this script is located
 app_dir = os.path.dirname(os.path.abspath(__file__))
@@ -25,130 +25,157 @@ TIMEZONE = pytz.timezone(os.getenv('TIMEZONE', 'Australia/Melbourne'))
 # Configure session to last 7 days
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
+# Set up SQLite database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user_data.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
 # Allergens list
 allergens = ["Eggs", "Baked Egg", "Rice", "Oat", "Sesame", "Seeds", "Shellfish", "Fish", "Peanuts", "Almond", "Hazelnut", "Cashew", "Macadamia", "Pistachio", "Pine Nut", "Other Treenuts"]
 
-# Path to the CSV file
 CSV_FILE = os.path.join(app_dir, 'user_data.csv')
 
-def ensure_csv_header():
-    """Ensure the CSV file has the correct headers."""
-    file_exists = os.path.exists(CSV_FILE)
-    
-    with open(CSV_FILE, mode='a+', newline='') as file:
-        fcntl.flock(file, fcntl.LOCK_EX)  # Lock the file
-        try:
-            file.seek(0)  # Go to the start of the file
-            first_line = file.readline().strip()
-            
-            if not file_exists or first_line != 'username,allergen,timestamp':
-                file.seek(0)
-                file.truncate()
-                writer = csv.writer(file)
-                writer.writerow(['username', 'allergen', 'timestamp'])
-        finally:
-            fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
+# Models
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
 
-def load_user_data(username):
-    """Load the user's data from the CSV file."""
-    ensure_csv_header()
-    user_data = defaultdict(list)
+class Allergen(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+
+class UserAllergen(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    allergen_id = db.Column(db.Integer, db.ForeignKey('allergen.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False)
     
-    if os.path.exists(CSV_FILE):
-        with open(CSV_FILE, mode='r') as file:
-            fcntl.flock(file, fcntl.LOCK_SH)  # Shared lock for reading
-            try:
-                reader = csv.DictReader(file)
-                for row in reader:
-                    if row['username'].strip().lower() == username.lower():
-                        timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE)
-                        user_data[row['allergen']].append(timestamp)
-            finally:
-                fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
+    user = db.relationship('User', backref=db.backref('allergen_data', lazy=True))
+    allergen = db.relationship('Allergen', backref=db.backref('user_data', lazy=True))
+
+# Ensure the database is created
+with app.app_context():
+    db.create_all()
+
+def load_data_from_csv():
+    """Load data from the existing CSV into the SQLite database."""
+    if not os.path.exists(CSV_FILE):
+        print(f"CSV file '{CSV_FILE}' does not exist.")
+        return
+
+    # Read the CSV file and insert the data into the SQLite database
+    with open(CSV_FILE, mode='r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            username = row['username'].strip().lower()
+            allergen_name = row['allergen']
+            timestamp = datetime.fromisoformat(row['timestamp']).replace(tzinfo=pytz.utc)
+
+            # Get or create the user
+            user = User.query.filter_by(username=username).first()
+            if not user:
+                user = User(username=username)
+                db.session.add(user)
+                db.session.commit()
+
+            # Get or create the allergen
+            allergen = Allergen.query.filter_by(name=allergen_name).first()
+            if not allergen:
+                allergen = Allergen(name=allergen_name)
+                db.session.add(allergen)
+                db.session.commit()
+
+            # Save the record if it doesn't exist
+            existing_record = UserAllergen.query.filter_by(user_id=user.id, allergen_id=allergen.id, timestamp=timestamp).first()
+            if not existing_record:
+                new_record = UserAllergen(user_id=user.id, allergen_id=allergen.id, timestamp=timestamp)
+                db.session.add(new_record)
+        db.session.commit()
+
+    print("Data successfully loaded from CSV into the SQLite database.")
+
+# Load data from CSV at app start
+with app.app_context():
+    load_data_from_csv()
+
+# Helper functions
+def load_user_data(username):
+    """Load the user's data from the SQLite database."""
+    user = User.query.filter_by(username=username.lower()).first()
+    if not user:
+        return defaultdict(list)
+    
+    user_data = defaultdict(list)
+    records = UserAllergen.query.filter_by(user_id=user.id).all()
+    
+    for record in records:
+        timestamp = record.timestamp.astimezone(TIMEZONE)
+        user_data[record.allergen.name].append(timestamp)
     
     return user_data
 
-def save_user_data(username, allergen, timestamp):
-    """Save the user's data to the CSV file."""
-    ensure_csv_header()
-    with open(CSV_FILE, mode='a', newline='') as file:
-        fcntl.flock(file, fcntl.LOCK_EX)  # Lock the file for writing
-        try:
-            writer = csv.writer(file)
-            # Convert the timestamp to UTC before saving
-            timestamp_utc = timestamp.astimezone(pytz.utc)
-            writer.writerow([username, allergen, timestamp_utc.isoformat()])
-        finally:
-            fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
+def save_user_data(username, allergen_name, timestamp):
+    """Save the user's data to the SQLite database."""
+    # Get or create the user
+    user = User.query.filter_by(username=username.lower()).first()
+    if not user:
+        user = User(username=username.lower())
+        db.session.add(user)
+        db.session.commit()
+
+    # Get or create the allergen
+    allergen = Allergen.query.filter_by(name=allergen_name).first()
+    if not allergen:
+        allergen = Allergen(name=allergen_name)
+        db.session.add(allergen)
+        db.session.commit()
+
+    # Save the UserAllergen entry
+    timestamp_utc = timestamp.astimezone(pytz.utc)
+    new_record = UserAllergen(user_id=user.id, allergen_id=allergen.id, timestamp=timestamp_utc)
+    db.session.add(new_record)
+    db.session.commit()
 
 def get_existing_users():
-    """Retrieve a list of existing users from the CSV file."""
-    users = set()
-    if os.path.exists(CSV_FILE):
-        with open(CSV_FILE, mode='r') as file:
-            fcntl.flock(file, fcntl.LOCK_SH)  # Shared lock for reading
-            try:
-                reader = csv.DictReader(file)
-                for row in reader:
-                    users.add(row['username'].strip().lower())
-            finally:
-                fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
-    return sorted(users)
+    """Retrieve a list of existing users from the SQLite database."""
+    users = db.session.query(User.username).distinct().all()
+    return sorted(set(user.username for user in users))
 
-def remove_user_data(username, allergen, current_date):
-    """Remove the user's data from the CSV file for the given date."""
-    if not os.path.exists(CSV_FILE):
+def remove_user_data(username, allergen_name, current_date):
+    """Remove the user's data from the SQLite database for the given date."""
+    user = User.query.filter_by(username=username.lower()).first()
+    if not user:
         return
 
-    # Load all data into memory first
-    rows_to_keep = []
-    
-    with open(CSV_FILE, mode='r') as file:
-        fcntl.flock(file, fcntl.LOCK_SH)  # Shared lock for reading
-        reader = csv.DictReader(file)
-        for row in reader:
-            row_timestamp = datetime.fromisoformat(row['timestamp']).astimezone(TIMEZONE).date()
-            if not (row['username'].strip().lower() == username.lower() and 
-                    row['allergen'] == allergen and 
-                    row_timestamp == current_date):
-                rows_to_keep.append(row)
-        fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
-    
-    # Now write only the remaining rows back to the file
-    with open(CSV_FILE, mode='w', newline='') as file:
-        fcntl.flock(file, fcntl.LOCK_EX)  # Lock the file for writing
-        writer = csv.DictWriter(file, fieldnames=['username', 'allergen', 'timestamp'])
-        writer.writeheader()
-        writer.writerows(rows_to_keep)
-        fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
+    allergen = Allergen.query.filter_by(name=allergen_name).first()
+    if not allergen:
+        return
 
-
+    records_to_delete = UserAllergen.query.filter_by(user_id=user.id, allergen_id=allergen.id).all()
+    for record in records_to_delete:
+        if record.timestamp.astimezone(TIMEZONE).date() == current_date:
+            db.session.delete(record)
+    db.session.commit()
 
 def get_selected_allergens(username, current_date):
     """Get a list of allergens selected by the user on the current date."""
     selected_allergens = []
-
-    if not os.path.exists(CSV_FILE):
+    user = User.query.filter_by(username=username.lower()).first()
+    if not user:
         return selected_allergens
-
-    with open(CSV_FILE, mode='r') as file:
-        fcntl.flock(file, fcntl.LOCK_SH)  # Shared lock for reading
-        try:
-            reader = csv.DictReader(file)
-            for row in reader:
-                # Convert the timestamp from UTC to the configured timezone
-                row_timestamp = datetime.fromisoformat(row['timestamp']).replace(tzinfo=pytz.utc).astimezone(TIMEZONE)
-                if row['username'].strip().lower() == username.lower() and row_timestamp.date() == current_date:
-                    selected_allergens.append(row['allergen'])
-        finally:
-            fcntl.flock(file, fcntl.LOCK_UN)  # Unlock the file
-
+    
+    records = UserAllergen.query.filter_by(user_id=user.id).all()
+    for record in records:
+        record_date = record.timestamp.astimezone(TIMEZONE).date()
+        if record_date == current_date:
+            selected_allergens.append(record.allergen.name)
     return selected_allergens
 
 def get_current_date():
     """Return the current date based on the configured timezone."""
     return datetime.now(TIMEZONE).date()
 
+# Routes
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'username' in session:

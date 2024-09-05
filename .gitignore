@@ -4,3 +4,5 @@ __pycache__/
 *.py[cod]
 *.pyo
 user_data.csv
+instance/
+user_data.db
