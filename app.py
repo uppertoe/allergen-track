@@ -31,7 +31,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # Allergens list
-allergens = ["Eggs", "Baked Egg", "Rice", "Oat", "Sesame", "Seeds", "Shellfish", "Fish", "Peanuts", "Almond", "Hazelnut", "Cashew", "Macadamia", "Pistachio", "Pine Nut", "Other Treenuts"]
+allergens = ["Eggs", "Baked Egg", "Rice", "Oat", "Soy", "Sesame", "Seeds", "Shellfish", "Fish", "Peanuts", "Almond", "Hazelnut", "Cashew", "Macadamia", "Pistachio", "Pine Nut", "Other Treenuts"]
 
 CSV_FILE = os.path.join(app_dir, 'user_data.csv')
 
